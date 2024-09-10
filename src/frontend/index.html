@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WebSocket Chat</title>
+    <style>
+
+        #container {
+            display: flex;
+            height: 100vh;
+        }
+
+        #chat-list {
+            width: 15%;
+            border-right: 1px solid #ccc;
+            padding: 10px;
+        }
+
+        #chat-area {
+            width: 85%;
+            padding: 10px;
+        }
+
+        #chatbox {
+            height: calc(100vh - 200px);
+            overflow-y: auto;
+            border: 1px solid #ccc;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+
+        #message {
+            width: 88%;
+        }
+
+        #send-button {
+            width: calc(100% - 90%);
+        }
+    </style>
+</head>
+<body>
+<h1>WebSocket Chat</h1>
+<div id="container">
+    <div id="chat-list">Chat List</div>
+    <div id="chat-area">
+        <div id="chatbox"></div>
+        <input type="text" id="message" placeholder="Type a message...">
+        <button id="send-button" onclick="sendMessage()">Send</button>
+    </div>
+</div>
+<script src="chat.js"></script>
+</body>
+</html>

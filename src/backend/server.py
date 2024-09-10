@@ -1,23 +1,26 @@
 #!/usr/bin/env python
 
 import asyncio
+import websockets
 
-from websockets.asyncio.server import serve, ServerConnection
+connected_clients = set()
 
 
-async def hello(websocket: ServerConnection) -> None:
-    name = await websocket.recv()
-    print(f"<<< {name.__str__()}")
-
-    greeting = f"Hello {name.__str__()}!"
-
-    await websocket.send(greeting)
-    print(f">>> {greeting}")
+async def handle_client(websocket: websockets.WebSocketServerProtocol):
+    # Register the new client
+    connected_clients.add(websocket)
+    try:
+        async for message in websocket:
+            # Broadcast the message to all connected clients
+            await asyncio.gather(*[client.send(message) for client in connected_clients])
+    finally:
+        # Unregister the client
+        connected_clients.remove(websocket)
 
 
 async def main():
-    async with serve(hello, "localhost", 8765):
-        await asyncio.get_running_loop().create_future()  # run forever
+    server = await websockets.serve(handle_client, "localhost", 6789)
+    await server.wait_closed()
 
 
 if __name__ == "__main__":
