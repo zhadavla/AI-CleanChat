@@ -1,15 +1,23 @@
-#!/usr/bin/env python
-
 import asyncio
+from typing import Set
+
 import websockets
+from websockets import WebSocketServerProtocol
 
-connected_clients = set()
+connected_clients: Set[WebSocketServerProtocol] = set()
 
 
-async def handle_client(websocket: websockets.WebSocketServerProtocol):
+async def handle_client(websocket: WebSocketServerProtocol):
     # Register the new client
     connected_clients.add(websocket)
     try:
+        # Receive the username as the first message
+        username = await websocket.recv()
+
+        # Notify all clients about the new user
+        new_user_message = f"NEW_USER:{username}"
+        await asyncio.gather(*[client.send(new_user_message) for client in connected_clients])
+
         async for message in websocket:
             # Broadcast the message to all connected clients
             await asyncio.gather(*[client.send(message) for client in connected_clients])
