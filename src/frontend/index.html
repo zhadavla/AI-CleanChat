@@ -1,19 +1,42 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WebSocket Chat</title>
-    <link rel="stylesheet" type="text/css" href="/static/style.css">
+    <link rel="stylesheet" href="/static/styles.css">
 </head>
 <body>
-<h1>WebSocket Chat</h1>
+<!-- Header, visible only during registration -->
+
+<!-- Username input form -->
+<form id="usernameForm">
+    <h1 id="header">WebSocket Chat</h1>
+    <label for="username">Enter your username:</label>
+    <input type="text" id="username" name="username" required>
+    <button type="submit">Join Chat</button>
+</form>
+
+<!-- Chat container, hidden until user enters username -->
 <div id="container">
-    <div id="chat-list">Chat List</div>
+    <!-- Online users list -->
+    <div id="chat-list">
+        <h3>Online Users</h3>
+        <ul id="online-users"></ul>
+    </div>
+
+    <!-- Chat area -->
     <div id="chat-area">
         <div id="chatbox"></div>
-        <input type="text" id="message" placeholder="Type a message...">
-        <button id="send-button" onclick="sendMessage()">Send</button>
+        <form id="messageForm">
+            <input type="text" id="messageInput" placeholder="Type a message..." required>
+            <button type="submit" id="send-button">Send</button>
+        </form>
     </div>
 </div>
-    <script src="/static/chat.js"></script>
+
+<!-- Link to external JavaScript file -->
+<script src="/static/chat.js"></script>
+
 </body>
 </html>

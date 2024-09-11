@@ -7,7 +7,8 @@
     background-color: #f0f0f0;
 }
 #container {
-    display: flex;
+    display: none;
+    flex-direction: row;
     height: 100vh;
 }
 
@@ -23,14 +24,14 @@
 }
 
 #chatbox {
-    height: calc(100vh - 200px);
+    height: calc(100vh - 100px);
     overflow-y: auto;
     border: 1px solid #ccc;
     padding: 10px;
     margin-bottom: 10px;
 }
 
-#message {
+#messageInput {
     width: 88%;
 }
 

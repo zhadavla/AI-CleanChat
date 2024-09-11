@@ -1,43 +1,54 @@
 const ws = new WebSocket("ws://localhost:8000/ws");
+let username;
 
-ws.onopen = () => {
-    console.log("Connected to the WebSocket server");
+document.getElementById("usernameForm").addEventListener("submit", function(event) {
+    event.preventDefault();
+    username = document.getElementById("username").value;
     ws.send(username);
-};
 
-ws.onmessage = (event) => {
-    const chatbox = document.getElementById("chatbox");
-    const chatList = document.getElementById("chat-list");
+    // Show chat container and hide the username form
+    document.getElementById("usernameForm").style.display = "none";
+    document.getElementById("container").style.display = "flex";
+});
+
+ws.onmessage = function(event) {
     const message = event.data;
+    const chatbox = document.getElementById("chatbox");
 
-    if (message.startsWith("NEW_USER:")) {
-        const newUser = message.split(":")[1];
-        const userItem = document.createElement("div");
-        userItem.textContent = newUser;
-        userItem.classList.add("user-item");
-        userItem.onclick = () => {
-            // Handle user click to start chat
-            console.log(`Start chat with ${newUser}`);
-        };
-        chatList.appendChild(userItem);
+    if (message.startsWith("ONLINE_USERS:")) {
+        const onlineUsers = JSON.parse(message.split("ONLINE_USERS:")[1]);
+        updateOnlineUsers(onlineUsers);
+    } else if (message.startsWith("HISTORY:")) {
+        const history = JSON.parse(message.split("HISTORY:")[1]);
+        history.forEach(msg => {
+            chatbox.innerHTML += `<div><strong>${msg.user}</strong>: ${msg.content} (${msg.timestamp})</div>`;
+        });
+        scrollToBottom(chatbox); // Scroll to the end after loading history
     } else {
-        const messageDiv = document.createElement("div");
-        messageDiv.textContent = message;
-        chatbox.appendChild(messageDiv);
+        chatbox.innerHTML += `<div>${message}</div>`;
+        scrollToBottom(chatbox); // Scroll to the end when a new message is added
     }
 };
 
-let username = prompt("Enter your username:");
-
-function sendMessage() {
-    const input = document.getElementById("message");
-    const message = `${username}: ${input.value}`;
+document.getElementById("messageForm").addEventListener("submit", function(event) {
+    event.preventDefault();
+    const message = document.getElementById("messageInput").value;
     ws.send(message);
-    input.value = "";
+    document.getElementById("messageInput").value = "";
+});
+
+// Scroll chatbox to the bottom
+function scrollToBottom(chatbox) {
+    chatbox.scrollTop = chatbox.scrollHeight;
 }
 
-document.getElementById("message").addEventListener("keydown", (event) => {
-    if (event.key === "Enter") {
-        sendMessage();
-    }
-});
+function updateOnlineUsers(users) {
+    const usersList = document.getElementById("online-users");
+    usersList.innerHTML = "";  // Clear existing list
+    users.forEach(user => {
+        const li = document.createElement("li");
+        li.textContent = user;
+        li.classList.add("user-item");
+        usersList.appendChild(li);
+    });
+}
