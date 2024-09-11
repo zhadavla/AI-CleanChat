@@ -1,4 +1,4 @@
-const ws = new WebSocket("ws://localhost:6789");
+const ws = new WebSocket("ws://localhost:8000/ws");
 
 ws.onopen = () => {
     console.log("Connected to the WebSocket server");
@@ -41,4 +41,3 @@ document.getElementById("message").addEventListener("keydown", (event) => {
         sendMessage();
     }
 });
-

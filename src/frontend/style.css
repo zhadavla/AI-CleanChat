@@ -1,0 +1,39 @@
+.user-item {
+    cursor: pointer;
+    padding: 5px;
+    border-bottom: 1px solid #ccc;
+}
+.user-item:hover {
+    background-color: #f0f0f0;
+}
+#container {
+    display: flex;
+    height: 100vh;
+}
+
+#chat-list {
+    width: 15%;
+    border-right: 1px solid #ccc;
+    padding: 10px;
+}
+
+#chat-area {
+    width: 85%;
+    padding: 10px;
+}
+
+#chatbox {
+    height: calc(100vh - 200px);
+    overflow-y: auto;
+    border: 1px solid #ccc;
+    padding: 10px;
+    margin-bottom: 10px;
+}
+
+#message {
+    width: 88%;
+}
+
+#send-button {
+    width: calc(100% - 90%);
+}
