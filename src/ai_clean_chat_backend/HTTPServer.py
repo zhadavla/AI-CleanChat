@@ -1,32 +1,28 @@
+# src/ai_clean_chat_backend/HTTPServer.py
 import json
+import os
+from typing import Dict
+
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Depends
-from fastapi.responses import HTMLResponse
-from fastapi.staticfiles import StaticFiles
-from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
-from database import get_db, User, Message
+from starlette.responses import HTMLResponse
+from starlette.staticfiles import StaticFiles
 
-app = FastAPI()
+from ai_clean_chat_backend.database import get_db, User, Message
 
-# Middleware for CORS
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+app: FastAPI = FastAPI()
 
-# Serve the frontend folder for HTML and static files (adjusted directory)
-app.mount("/static", StaticFiles(directory="../frontend"), name="static")
+connected_clients: Dict[WebSocket, str] = {}
 
-connected_clients = {}
-
+import logging
+logging.basicConfig(level=logging.INFO)
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket, db: Session = Depends(get_db)):
     await websocket.accept()
     username = await websocket.receive_text()
+
+    logging.info(f"User {username} has joined.")
 
     # Mark user as online
     user = db.query(User).filter(User.name == username).first()
@@ -43,12 +39,14 @@ async def websocket_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
 
     # Send chat history to the new user
     messages = db.query(Message).all()
-    history = [{"user": message.user.name, "content": message.content, "timestamp": message.timestamp} for message in
-               messages]
+    history = [{"user": message.user.name, "content": message.content, "timestamp": message.timestamp}
+               for message in messages]
+    logging.info(f"Sending chat history to {username}: {history}")
     await websocket.send_text(f"HISTORY:{json.dumps(history)}")
 
     # Send the list of online users to the new user
     online_users = [client_name for client_name in connected_clients.values()]
+    logging.info(f"Online users: {online_users}")
     await websocket.send_text(f"ONLINE_USERS:{json.dumps(online_users)}")
 
     # Notify all clients that a new user has joined
@@ -90,12 +88,16 @@ async def broadcast_online_users():
         await client.send_text(f"ONLINE_USERS:{json.dumps(online_users)}")
 
 
+# Define the base directory (project root)
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+# Mount static files
+app.mount("/static", StaticFiles(directory=os.path.join(BASE_DIR, "frontend")), name="static")
+
+
 @app.get("/")
 async def get():
-    # Serve the HTML for the chat interface (adjusted directory)
-    return HTMLResponse(open("../frontend/index.html").read())
-
-if __name__ == "__main__":
-    import uvicorn
-
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    # Serve the index.html file
+    index_path = os.path.join(BASE_DIR, "frontend", "index.html")
+    with open(index_path, 'r') as f:
+        return HTMLResponse(f.read())
