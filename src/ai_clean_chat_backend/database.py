@@ -1,14 +1,15 @@
+# src/ai_clean_chat_backend/database.py
 from sqlalchemy import create_engine, Column, Integer, String, Boolean, ForeignKey, Text
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker, relationship
+from sqlalchemy.orm import sessionmaker, relationship, declarative_base
 from sqlalchemy.sql import func
 
-DATABASE_URL = "sqlite:///./test.db"
+DATABASE_URL = "sqlite:///./clean_chatdb.db"
 
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 Base = declarative_base()
+
 
 def get_db():
     db = SessionLocal()
@@ -16,6 +17,7 @@ def get_db():
         yield db
     finally:
         db.close()
+
 
 class User(Base):
     __tablename__ = "users"
@@ -26,6 +28,7 @@ class User(Base):
 
     messages = relationship("Message", back_populates="user")
 
+
 class Message(Base):
     __tablename__ = "messages"
 
@@ -35,6 +38,7 @@ class Message(Base):
     user_id = Column(Integer, ForeignKey("users.id"))
 
     user = relationship("User", back_populates="messages")
+
 
 # Create the tables
 Base.metadata.create_all(bind=engine)
