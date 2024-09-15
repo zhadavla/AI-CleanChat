@@ -29,15 +29,17 @@ class User(Base):
     messages = relationship("Message", back_populates="user")
 
 
+# Add a new column to the Message model to store harmfulness
 class Message(Base):
     __tablename__ = "messages"
 
     id = Column(Integer, primary_key=True, index=True)
-    content = Column(Text, nullable=False)
-    timestamp = Column(String, server_default=func.now())
+    content = Column(String, nullable=False)
     user_id = Column(Integer, ForeignKey("users.id"))
+    timestamp = Column(String, nullable=False)
+    is_harmful = Column(Boolean, default=False)  # New column to store harmfulness
 
-    user = relationship("User", back_populates="messages")
+    user = relationship("User")
 
 
 # Create the tables

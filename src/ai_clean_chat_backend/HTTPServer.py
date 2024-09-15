@@ -1,6 +1,7 @@
 # src/ai_clean_chat_backend/HTTPServer.py
 import json
 import os
+from datetime import datetime
 from typing import Dict
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Depends
@@ -8,6 +9,7 @@ from sqlalchemy.orm import Session
 from starlette.responses import HTMLResponse
 from starlette.staticfiles import StaticFiles
 
+from ai_clean_chat_backend import predict_harmful
 from ai_clean_chat_backend.database import get_db, User, Message
 
 app: FastAPI = FastAPI()
@@ -15,7 +17,9 @@ app: FastAPI = FastAPI()
 connected_clients: Dict[WebSocket, str] = {}
 
 import logging
+
 logging.basicConfig(level=logging.INFO)
+
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket, db: Session = Depends(get_db)):
@@ -37,7 +41,7 @@ async def websocket_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
     # Add user to connected_clients
     connected_clients[websocket] = username
 
-    # Send chat history to the new user
+    # Send chat   to the new user
     messages = db.query(Message).all()
     history = [{"user": message.user.name, "content": message.content, "timestamp": message.timestamp}
                for message in messages]
@@ -58,13 +62,25 @@ async def websocket_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
             message_text = await websocket.receive_text()
 
             # Save message in the database
-            new_message = Message(content=message_text, user_id=user.id)
+            new_message = Message(content=message_text, user_id=user.id, timestamp=str(datetime.now()))
+
+            def predict_harmfulness(text: str) -> bool:
+                import random
+                return random.choice([True, False])
+
+            # Check if the message is harmful and broadcast it accordingly
+            if predict_harmfulness(message_text):
+                new_message.is_harmful = True
+                message_to_broadcast = f"HARMFUL:{username}:{message_text}"
+                logging.info(f"Broadcasting {{{message_to_broadcast}}} ")
+                await broadcast(f"HARMFUL_MESSAGE:{username}:{message_text}")
+            else:
+                logging.info(f"Broadcasting {{{message_text}}} ")
+                await broadcast(f"MESSAGE:{username}: {message_text}")
+
+
             db.add(new_message)
             db.commit()
-
-            # Broadcast the message to all clients
-            await broadcast(f"{username}: {message_text}")
-
     except WebSocketDisconnect:
         # Mark user as offline in DB
         user.is_online = False
@@ -90,14 +106,17 @@ async def broadcast_online_users():
 
 # Define the base directory (project root)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+print(BASE_DIR)
 
 # Mount static files
-app.mount("/static", StaticFiles(directory=os.path.join(BASE_DIR, "frontend")), name="static")
+app.mount("/static", StaticFiles(directory=os.path.join(BASE_DIR, "static")), name="static")
 
 
 @app.get("/")
 async def get():
-    # Serve the index.html file
-    index_path = os.path.join(BASE_DIR, "frontend", "index.html")
+    # refresh static everytime server restarted
+    version = "v1.0"
+    index_path = os.path.join(BASE_DIR, "static", "index.html")
     with open(index_path, 'r') as f:
-        return HTMLResponse(f.read())
+        html_content = f.read().replace("/static/chat.js", f"/static/chat.js?version={version}")
+        return HTMLResponse(html_content)
