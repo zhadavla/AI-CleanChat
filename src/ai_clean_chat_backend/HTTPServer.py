@@ -38,16 +38,6 @@ async def send_history(websocket: WebSocket, db: Session):
     await websocket.send_text(json.dumps(history_message))
 
 
-async def send_online_users(websocket):
-    # Structure and send the list of online users
-    online_users = [client_name for client_name in connected_clients.values()]
-    online_users_message = {
-        "type": "online_users",
-        "data": online_users
-    }
-    await websocket.send_text(json.dumps(online_users_message))
-
-
 async def broadcast_new_user(username: str):
     # Notify all clients that a new user has joined
     message = {
@@ -90,6 +80,7 @@ async def websocket_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
 
     # Add user to connected_clients
     connected_clients[websocket] = username
+    print(f"Connected clients: {connected_clients}")
 
     await send_history(websocket, db)
 
@@ -133,7 +124,15 @@ async def websocket_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
 
         # Remove from connected clients
         del connected_clients[websocket]
-        await broadcast(f"{username} has left the chat.")
+        to_send = {
+            "type": "user_left",
+            "data": {
+                "user": username,
+                "content": "has left the chat!",
+                "timestamp": str(datetime.now())
+            }
+        }
+        await broadcast(json.dumps(to_send))
         await send_online_users(websocket)
 
 
@@ -142,11 +141,15 @@ async def broadcast(message: str):
         await client.send_text(message)
 
 
-async def broadcast_online_users():
-    # Broadcast the updated list of online users to all clients
+async def send_online_users(websocket):
+    # Structure and send the list of online users
     online_users = [client_name for client_name in connected_clients.values()]
+    online_users_message = {
+        "type": "online_users",
+        "data": online_users
+    }
     for client in connected_clients:
-        await client.send_text(json.dumps(online_users))
+        await client.send_text(json.dumps(online_users_message))
 
 
 # Define the base directory (project root)
