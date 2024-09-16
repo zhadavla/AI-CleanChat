@@ -21,12 +21,59 @@ import logging
 logging.basicConfig(level=logging.INFO)
 
 
+async def send_history(websocket: WebSocket, db: Session):
+    # Fetch and structure the message history
+    messages = db.query(Message).all()
+    history = [
+        {"user": message.user.name, "content": message.content, "timestamp": message.timestamp}
+        for message in messages
+    ]
+    history_message = {
+        "type": "history",
+        "data": history
+    }
+    await websocket.send_text(json.dumps(history_message))
+
+
+async def send_online_users(websocket):
+    # Structure and send the list of online users
+    online_users = [client_name for client_name in connected_clients.values()]
+    online_users_message = {
+        "type": "online_users",
+        "data": online_users
+    }
+    await websocket.send_text(json.dumps(online_users_message))
+
+
+async def broadcast_new_user(username: str):
+    # Notify all clients that a new user has joined
+    message = {
+        "type": "message",
+        "data": {
+            "user": username,
+            "content": "has joined the chat!",
+            "timestamp": None
+        }
+    }
+    await broadcast(json.dumps(message))
+
+
+async def broadcast_message(username: str, message: str):
+    message = {
+        "type": "message",
+        "data": {
+            "user": username,
+            "content": message,
+            "timestamp": str(datetime.now())
+        }
+    }
+    await broadcast(json.dumps(message))
+
+
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket, db: Session = Depends(get_db)):
     await websocket.accept()
     username = await websocket.receive_text()
-
-    logging.info(f"User {username} has joined.")
 
     # Mark user as online
     user = db.query(User).filter(User.name == username).first()
@@ -41,20 +88,12 @@ async def websocket_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
     # Add user to connected_clients
     connected_clients[websocket] = username
 
-    # Send chat   to the new user
-    messages = db.query(Message).all()
-    history = [{"user": message.user.name, "content": message.content, "timestamp": message.timestamp}
-               for message in messages]
-    logging.info(f"Sending chat history to {username}: {history}")
-    await websocket.send_text(f"HISTORY:{json.dumps(history)}")
+    await send_history(websocket, db)
 
-    # Send the list of online users to the new user
-    online_users = [client_name for client_name in connected_clients.values()]
-    logging.info(f"Online users: {online_users}")
-    await websocket.send_text(f"ONLINE_USERS:{json.dumps(online_users)}")
+    await send_online_users(websocket)
 
     # Notify all clients that a new user has joined
-    await broadcast(f"{username} has joined the chat!")
+    await broadcast_new_user(username)
     await broadcast_online_users()
 
     try:
@@ -68,16 +107,21 @@ async def websocket_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
                 import random
                 return random.choice([True, False])
 
+            to_send: json = {
+                "type": "message",
+                "subtype": "clean",
+                "data": {
+                    "user": username,
+                    "content": message_text,
+                    "timestamp": str(datetime.now())
+                },
+            }
             # Check if the message is harmful and broadcast it accordingly
             if predict_harmfulness(message_text):
                 new_message.is_harmful = True
-                message_to_broadcast = f"HARMFUL:{username}:{message_text}"
-                logging.info(f"Broadcasting {{{message_to_broadcast}}} ")
-                await broadcast(f"HARMFUL_MESSAGE:{username}:{message_text}")
-            else:
-                logging.info(f"Broadcasting {{{message_text}}} ")
-                await broadcast(f"MESSAGE:{username}: {message_text}")
+                to_send["subtype"] = "harmful"
 
+            await broadcast(json.dumps(to_send))
 
             db.add(new_message)
             db.commit()
@@ -115,8 +159,11 @@ app.mount("/static", StaticFiles(directory=os.path.join(BASE_DIR, "static")), na
 @app.get("/")
 async def get():
     # refresh static everytime server restarted
-    version = "v1.0"
+    version = "v1.1"
     index_path = os.path.join(BASE_DIR, "static", "index.html")
     with open(index_path, 'r') as f:
-        html_content = f.read().replace("/static/chat.js", f"/static/chat.js?version={version}")
+        html_content = f.read() \
+            .replace("/static/chat.js", f"/static/chat.js?version={version}") \
+            .replace("/static/chat.css", f"/static/chat.css?version={version}")
+
         return HTMLResponse(html_content)
