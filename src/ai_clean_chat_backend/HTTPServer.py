@@ -6,11 +6,13 @@ from typing import Dict
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Depends
 from sqlalchemy.orm import Session
+from starlette.concurrency import run_in_threadpool
 from starlette.responses import HTMLResponse
 from starlette.staticfiles import StaticFiles
 
 from ai_clean_chat_backend import predict_harmful
 from ai_clean_chat_backend.database import get_db, User, Message
+from ai_clean_chat_backend.predict_harmful import predict_harmfulness
 
 app: FastAPI = FastAPI()
 
@@ -94,10 +96,6 @@ async def websocket_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
             # Save message in the database
             new_message = Message(content=message_text, user_id=user.id, timestamp=str(datetime.now()))
 
-            def predict_harmfulness(text: str) -> bool:
-                import random
-                return random.choice([True, False])
-
             to_send: json = {
                 "type": "message",
                 "subtype": "clean",
@@ -107,8 +105,11 @@ async def websocket_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
                     "timestamp": str(datetime.now())
                 },
             }
-            # Check if the message is harmful and broadcast it accordingly
-            if predict_harmfulness(message_text):
+            # Run harmfulness prediction in a threadpool to avoid blocking the WebSocket event loop
+            harmful_prediction = await run_in_threadpool(predict_harmfulness, [message_text])
+
+            # Check the prediction and update the message subtype if it's harmful
+            if harmful_prediction[0] == "hate_speech" or harmful_prediction[0] == "offensive_language":
                 new_message.is_harmful = True
                 to_send["subtype"] = "harmful"
 
@@ -153,7 +154,7 @@ async def send_online_users(websocket):
 
 # Define the base directory (project root)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-print(BASE_DIR)
+print(f'{BASE_DIR=}')
 
 # Mount static files
 app.mount("/static", StaticFiles(directory=os.path.join(BASE_DIR, "static")), name="static")
@@ -170,3 +171,7 @@ async def get():
             .replace("/static/chat.css", f"/static/chat.css?version={version}")
 
         return HTMLResponse(html_content)
+
+if __name__ == "__main__":
+    # print current dir
+    print(os.getcwd())
