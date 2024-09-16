@@ -3,9 +3,11 @@
     padding: 5px;
     border-bottom: 1px solid #ccc;
 }
+
 .user-item:hover {
     background-color: #f0f0f0;
 }
+
 #container {
     display: none;
     flex-direction: row;
@@ -27,8 +29,8 @@
     height: calc(100vh - 100px);
     overflow-y: auto;
     border: 1px solid #ccc;
-    padding: 10px;
-    margin-bottom: 10px;
+    padding: 10px; /* Reduced padding inside the chatbox */
+    margin-bottom: 5px; /* Reduced margin at the bottom */
 }
 
 #messageInput {
@@ -39,16 +41,102 @@
     width: calc(100% - 90%);
 }
 
-.harmful-message {
-    cursor: pointer;
-    margin: 5px 0;
+.message-item {
+    margin-bottom: 3px; /* Decrease margin between messages */
+    padding: 8px; /* Adjust padding inside the message box */
+    background-color: #f0f0f0; /* Keep the background color */
+    border-radius: 5px; /* Keep the rounded corners */
+    max-width: 80%;
+    width: fit-content;
+    word-break: break-all
 }
 
 .blurred {
-    filter: blur(5px);
-    cursor: pointer; /* Shows it's clickable */
+    display: inline-block;
 }
 
-.harmful-message {
-    color: red;
+.popup {
+    display: none;
+    position: relative; /* Changed to relative */
+    top: 10px; /* Adjust to move the popup below the message */
+    margin-top: 10px; /* Adds space between the message and popup */
+    background-color: white;
+    padding: 10px;
+    border-radius: 5px;
+    box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+    z-index: 100; /* Ensure popup appears above other elements */
+}
+
+.popup p {
+    margin: 0;
+    padding: 0;
+    font-size: 14px;
+}
+
+.popup button {
+    margin: 5px;
+    padding: 5px 10px;
+    border: none;
+    cursor: pointer;
+    border-radius: 3px;
+    font-size: 14px;
+}
+
+.good-btn {
+    background-color: lightgreen;
+}
+
+.bad-btn {
+    background-color: lightcoral;
+}
+
+.popup button:hover {
+    opacity: 0.9;
+}
+
+.message-item:hover .popup {
+    display: block; /* Show the popup on hover */
+}
+/* Styles for the message input box */
+#messageInput {
+    width: 88%;
+    padding: 10px;
+    font-size: 16px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    outline: none;
+    transition: border-color 0.3s ease;
+    box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Focused state for the input */
+#messageInput:focus {
+    border-color: #66afe9;
+    box-shadow: 0px 2px 6px rgba(102, 175, 233, 0.6);
+}
+
+/* Style for the send button */
+#send-button {
+    width: 9%;
+    padding: 10px;
+    background-color: #28a745;
+    color: white;
+    font-size: 16px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease, box-shadow 0.3s ease;
+    box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Hover effect for the send button */
+#send-button:hover {
+    background-color: #218838;
+    box-shadow: 0px 2px 6px rgba(0, 128, 0, 0.4);
+}
+
+/* Focused state for the send button */
+#send-button:focus {
+    outline: none;
+    box-shadow: 0px 2px 6px rgba(0, 128, 0, 0.6);
 }
