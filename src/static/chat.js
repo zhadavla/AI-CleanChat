@@ -32,6 +32,7 @@ function updateOnlineUsers(users) {
         usersList.appendChild(li);
     });
 }
+
 // Function to render a message (harmful or regular)
 function renderMessage(msg, chatbox) {
     console.log("Rendering message:", msg, "msg.data: ", msg.data);
@@ -185,12 +186,9 @@ ws.onmessage = function (event) {
             });
             break;
 
-        case "new_user":
-            renderMessage(message, chatbox);
-            break;
-
-
         case "message":
+        case "new_user":
+        case "user_left":
             renderMessage(message, chatbox);
             break;
 
