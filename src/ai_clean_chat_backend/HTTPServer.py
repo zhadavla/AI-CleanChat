@@ -29,6 +29,7 @@ async def send_history(websocket: WebSocket, db: Session):
     history = [
         {
             "type": "message",
+            "subtype": "clean" if not message.is_harmful else "harmful",
             "data": {"user": message.user.name, "content": message.content, "timestamp": message.timestamp}
         }
         for message in messages
