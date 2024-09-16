@@ -137,3 +137,93 @@ def test_websocket_chat_flow(client: TestClient, setup_database):
         message_data = json.loads(message_broadcast)
         assert message_data["data"]["user"] == "artem"
         assert message_data["data"]["content"] == "my first message"
+
+def test_websocket_two_users_chat_flow(client: TestClient, setup_database):
+    # Establish two WebSocket connections (for two users)
+    with client.websocket_connect("/ws") as websocket_user1, \
+            client.websocket_connect("/ws") as websocket_user2:
+        # Simulate "artem" joining the chat
+        websocket_user1.send_text("artem")
+
+        # Validate the history received by "artem" (should be empty at the beginning)
+        history_message_user1 = wait_for_message(websocket_user1)
+        history_data_user1 = json.loads(history_message_user1)
+        assert history_data_user1["type"] == "history"
+        assert history_data_user1["data"] == []  # Chat history should be empty initially
+
+        # Receive new_user broadcast for "artem" joining the chat
+        new_user_message_user1 = wait_for_message(websocket_user1)
+        new_user_data_user1 = json.loads(new_user_message_user1)
+        assert new_user_data_user1["type"] == "new_user"
+        assert new_user_data_user1["data"]["user"] == "artem"
+        assert new_user_data_user1["data"]["content"] == "has joined the chat!"
+
+        # Simulate "john" joining the chat
+        websocket_user2.send_text("john")
+
+        # Validate the history received by "john" (should also be empty)
+        history_message_user2 = wait_for_message(websocket_user2)
+        history_data_user2 = json.loads(history_message_user2)
+        assert history_data_user2["type"] == "history"
+        assert history_data_user2["data"] == []  # Chat history should be empty initially
+
+        # Receive new_user broadcast for "john" joining the chat
+        new_user_message_user2 = wait_for_message(websocket_user2)
+        new_user_data_user2 = json.loads(new_user_message_user2)
+        assert new_user_data_user2["type"] == "new_user"
+        assert new_user_data_user2["data"]["user"] == "john"
+        assert new_user_data_user2["data"]["content"] == "has joined the chat!"
+
+        # Validate online users for "artem" after john joins
+        online_users_message_user1 = wait_for_message(websocket_user1)
+        online_users_data_user1 = json.loads(online_users_message_user1)
+        assert online_users_data_user1["type"] == "online_users"
+        assert online_users_data_user1["data"] == ["artem"]
+
+        # Validate the updated online users for "artem" after john joins
+        updated_online_users_message_user1 = wait_for_message(websocket_user1)
+        updated_online_users_data_user1 = json.loads(updated_online_users_message_user1)
+        assert updated_online_users_data_user1["type"] == "new_user"
+        assert updated_online_users_data_user1["data"]["user"] == "john"
+        assert updated_online_users_data_user1["data"]["content"] == "has joined the chat!"
+
+        # Validate the online users list for "john"
+        online_users_message_user2 = wait_for_message(websocket_user2)
+        online_users_data_user2 = json.loads(online_users_message_user2)
+        assert online_users_data_user2["type"] == "online_users"
+        assert online_users_data_user2["data"] == ["artem", "john"]
+
+        # Simulate "artem" sending a message
+        websocket_user1.send_text("Hello from artem")
+
+        # Both "artem" and "john" should receive this message
+        message_broadcast_user1 = wait_for_message(websocket_user1)
+        message_data_user1 = json.loads(message_broadcast_user1)
+        assert message_data_user1["type"] == "online_users"
+        assert message_data_user1["data"] == ["artem", "john"]
+
+        message_broadcast_user2 = wait_for_message(websocket_user2)
+        message_data_user2 = json.loads(message_broadcast_user2)
+        assert message_data_user2["type"] == "message"
+        assert message_data_user2["subtype"] == "clean"
+        assert message_data_user2["data"]["user"] == "artem"
+        assert message_data_user2["data"]["content"] == "Hello from artem"
+
+        # Simulate "john" sending a message
+        websocket_user2.send_text("Hi artem, this is john")
+
+        # Both "artem" and "john" should receive this message
+        message_broadcast_user1 = wait_for_message(websocket_user1)
+        message_data_user1 = json.loads(message_broadcast_user1)
+        assert message_data_user1["type"] == "message"
+        assert message_data_user1["subtype"] == "clean"
+        assert message_data_user1["data"]["user"] == "artem"
+        assert message_data_user1["data"]["content"] == "Hello from artem"
+
+        message_broadcast_user2 = wait_for_message(websocket_user2)
+        message_data_user2 = json.loads(message_broadcast_user2)
+        assert message_data_user2["type"] == "message"
+        assert message_data_user2["subtype"] == "harmful"
+        assert message_data_user2["data"]["user"] == "john"
+        assert message_data_user2["data"]["content"] == "Hi artem, this is john"
+
