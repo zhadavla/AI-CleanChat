@@ -71,11 +71,24 @@ def test_websocket_basic_connection(client: TestClient, setup_database):
 
         # Receive the initial chat history (should be empty at the start)
         history_message = websocket.receive_text()
-        assert history_message.startswith("HISTORY:"), f"Expected history, got: {history_message}"
+        history_data = json.loads(history_message)
+        assert history_data["type"] == "history", f"Expected type 'history', got: {history_data['type']}"
+
+        # Receive new_user broadcast for "artem" joining the chat
+        join_message = websocket.receive_text()
+        join_data = json.loads(join_message)
+        assert join_data["type"] == "new_user", f"Expected type 'new_user', got: {join_data['type']}"
+        assert join_data["data"]["user"] == "artem", f"Expected 'artem' as user, got: {join_data['data']['user']}"
+        assert join_data["data"][
+                   "content"] == "has joined the chat!", f"Expected 'has joined the chat!', got: {join_data['data']['content']}"
 
         # Receive the list of online users (should contain only "artem")
         online_users_message = websocket.receive_text()
-        assert online_users_message.startswith("ONLINE_USERS:"), f"Expected online users, got: {online_users_message}"
+        online_users_data = json.loads(online_users_message)
+        assert online_users_data[
+                   "type"] == "online_users", f"Expected type 'online_users', got: {online_users_data['type']}"
+        assert "artem" in online_users_data[
+            "data"], f"Expected 'artem' in online users, got: {online_users_data['data']}"
 
 
 def wait_for_message(websocket, timeout=3):
@@ -98,29 +111,22 @@ def test_websocket_chat_flow(client: TestClient, setup_database):
 
         # Dynamically wait and validate the history (should be empty at the beginning)
         history_message = wait_for_message(websocket)
-        print(f"Received history: {history_message}")
-        assert history_message.startswith("HISTORY:")
-        history = json.loads(history_message.split("HISTORY:")[1])
-        assert history == []  # Chat history should be empty initially
+        history_data = json.loads(history_message)
+        assert history_data["type"] == "history"
+        assert history_data["data"] == []  # Chat history should be empty initially
+
+        # Recieve new_user broadcast for "artem" joining the chat
+        new_user_message = wait_for_message(websocket)
+        new_user_data = json.loads(new_user_message)
+        assert new_user_data["type"] == "new_user"
+        assert new_user_data["data"]["user"] == "artem"
 
         # Wait and validate the online users (should contain only "artem")
         online_users_message = wait_for_message(websocket)
         print(f"Received online users: {online_users_message}")
-        assert online_users_message.startswith("ONLINE_USERS:")
-        online_users = json.loads(online_users_message.split("ONLINE_USERS:")[1])
-        assert online_users == ["artem"]
-
-        # Wait for the "artem has joined the chat" broadcast
-        join_message = wait_for_message(websocket)
-        print(f"Received join message: {join_message}")
-        assert join_message == "artem has joined the chat!"
-
-        # Wait for the broadcasted online users again (should still contain "artem")
-        online_users_message = wait_for_message(websocket)
-        print(f"Received online users (again): {online_users_message}")
-        assert online_users_message.startswith("ONLINE_USERS:")
-        online_users = json.loads(online_users_message.split("ONLINE_USERS:")[1])
-        assert online_users == ["artem"]
+        online_users_data = json.loads(online_users_message)
+        assert online_users_data["type"] == "online_users"
+        assert online_users_data["data"] == ["artem"]
 
         # Simulate sending a message from "artem"
         websocket.send_text("my first message")
@@ -128,8 +134,6 @@ def test_websocket_chat_flow(client: TestClient, setup_database):
         # Wait and validate the broadcast of "artem: my first message"
         message_broadcast = wait_for_message(websocket)
         print(f"Received message broadcast: {message_broadcast}")
-        assert message_broadcast == "artem: my first message"
-
-
-if __name__ == "__main__":
-    pytest.main()
+        message_data = json.loads(message_broadcast)
+        assert message_data["data"]["user"] == "artem"
+        assert message_data["data"]["content"] == "my first message"

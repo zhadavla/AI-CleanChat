@@ -25,7 +25,10 @@ async def send_history(websocket: WebSocket, db: Session):
     # Fetch and structure the message history
     messages = db.query(Message).all()
     history = [
-        {"user": message.user.name, "content": message.content, "timestamp": message.timestamp}
+        {
+            "type": "message",
+            "data": {"user": message.user.name, "content": message.content, "timestamp": message.timestamp}
+        }
         for message in messages
     ]
     history_message = {
@@ -48,11 +51,11 @@ async def send_online_users(websocket):
 async def broadcast_new_user(username: str):
     # Notify all clients that a new user has joined
     message = {
-        "type": "message",
+        "type": "new_user",
         "data": {
             "user": username,
             "content": "has joined the chat!",
-            "timestamp": None
+            "timestamp": str(datetime.now())
         }
     }
     await broadcast(json.dumps(message))
@@ -90,11 +93,9 @@ async def websocket_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
 
     await send_history(websocket, db)
 
-    await send_online_users(websocket)
-
     # Notify all clients that a new user has joined
     await broadcast_new_user(username)
-    await broadcast_online_users()
+    await send_online_users(websocket)
 
     try:
         while True:
@@ -133,7 +134,7 @@ async def websocket_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
         # Remove from connected clients
         del connected_clients[websocket]
         await broadcast(f"{username} has left the chat.")
-        await broadcast_online_users()
+        await send_online_users(websocket)
 
 
 async def broadcast(message: str):
@@ -145,7 +146,7 @@ async def broadcast_online_users():
     # Broadcast the updated list of online users to all clients
     online_users = [client_name for client_name in connected_clients.values()]
     for client in connected_clients:
-        await client.send_text(f"ONLINE_USERS:{json.dumps(online_users)}")
+        await client.send_text(json.dumps(online_users))
 
 
 # Define the base directory (project root)
@@ -159,7 +160,7 @@ app.mount("/static", StaticFiles(directory=os.path.join(BASE_DIR, "static")), na
 @app.get("/")
 async def get():
     # refresh static everytime server restarted
-    version = "v1.1"
+    version = "v1.0"
     index_path = os.path.join(BASE_DIR, "static", "index.html")
     with open(index_path, 'r') as f:
         html_content = f.read() \

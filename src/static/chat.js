@@ -34,7 +34,9 @@ function updateOnlineUsers(users) {
 }
 // Function to render a message (harmful or regular)
 function renderMessage(msg, chatbox) {
+    console.log("Rendering message:", msg, "msg.data: ", msg.data);
     const messageId = `message-${msg.data.timestamp}`;
+    console.log(messageId)
 
     // Create message container div
     const messageDiv = document.createElement("div");
@@ -182,6 +184,11 @@ ws.onmessage = function (event) {
                 renderMessage(msg, chatbox);
             });
             break;
+
+        case "new_user":
+            renderMessage(message, chatbox);
+            break;
+
 
         case "message":
             renderMessage(message, chatbox);
