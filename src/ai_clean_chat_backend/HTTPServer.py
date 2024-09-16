@@ -80,7 +80,6 @@ async def websocket_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
 
     # Add user to connected_clients
     connected_clients[websocket] = username
-    print(f"Connected clients: {connected_clients}")
 
     await send_history(websocket, db)
 
