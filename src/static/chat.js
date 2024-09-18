@@ -1,4 +1,5 @@
-const ws = new WebSocket("ws://localhost:8000/ws");
+const socketProtocol = window.location.protocol === "https:" ? "wss" : "ws";
+const ws = new WebSocket(`${socketProtocol}://${window.location.host}/ws`);
 let username;
 
 document.getElementById("usernameForm").addEventListener("submit", function (event) {

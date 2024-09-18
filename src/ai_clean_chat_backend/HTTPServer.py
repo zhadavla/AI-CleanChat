@@ -90,6 +90,7 @@ async def websocket_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
     await broadcast_new_user(username)
     await send_online_users(websocket)
 
+
     try:
         while True:
             message_text = await websocket.receive_text()
@@ -164,7 +165,7 @@ app.mount("/static", StaticFiles(directory=os.path.join(BASE_DIR, "static")), na
 @app.get("/")
 async def get():
     # refresh static everytime server restarted
-    version = "v1.0"
+    version = "v1.1"
     index_path = os.path.join(BASE_DIR, "static", "index.html")
     with open(index_path, 'r') as f:
         html_content = f.read() \
@@ -172,7 +173,3 @@ async def get():
             .replace("/static/chat.css", f"/static/chat.css?version={version}")
 
         return HTMLResponse(html_content)
-
-if __name__ == "__main__":
-    # print current dir
-    print(os.getcwd())
