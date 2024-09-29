@@ -42,20 +42,6 @@ This project is an AI-powered web chat application featuring real-time harmful c
 - **Deployment**: Docker
 - **Testing**: pytest for WebSocket behavior and backend functionality
 
-## Getting Started
-
-To run the application locally, follow these steps:
-
-1. **Build the Docker containers**:
-
-    ```bash
-    docker-compose up --build
-    ```
-
-2. **Access the application**:
-
-    Open your browser and navigate to `http://localhost:8000` to use the chat application.
-
 ## Live Demo
 
 You can access a live demo of the chat application by clicking the link below:
