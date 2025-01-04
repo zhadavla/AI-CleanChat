@@ -107,10 +107,10 @@ async def websocket_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
                 },
             }
             # Run harmfulness prediction in a threadpool to avoid blocking the WebSocket event loop
-            harmful_prediction = await run_in_threadpool(predict_harmfulness, [message_text])
+            harmful_prediction: str = await run_in_threadpool(predict_harmfulness, message_text)
 
             # Check the prediction and update the message subtype if it's harmful
-            if harmful_prediction[0] == "hate_speech" or harmful_prediction[0] == "offensive_language":
+            if harmful_prediction == "hate_speech" or harmful_prediction == "offensive_language":
                 new_message.is_harmful = True
                 to_send["subtype"] = "harmful"
 
