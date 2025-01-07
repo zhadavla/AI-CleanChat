@@ -70,27 +70,29 @@ class ChatApplication:
         else:
             messagebox.showerror("Error", "Username cannot be empty!")
 
-    def send_message(self):
-        message = self.message_entry.get().strip()
-        if message:
-            asyncio.run_coroutine_threadsafe(self.ws.send(json.dumps({"type": "message", "data": {"user": self.username, "content": message}})), asyncio.get_event_loop())
-            self.message_entry.delete(0, "end")
-        else:
-            messagebox.showerror("Error", "Message cannot be empty!")
-
     async def websocket_handler(self):
-        async with websockets.connect("ws://localhost:8000/ws") as self.ws:
+        async with websockets.connect("ws://localhost:8000/ws") as ws:
+            self.ws = ws
             # Send username to server
             await self.ws.send(self.username)
             while True:
                 try:
                     message = await self.ws.recv()
+                    print("Received message:", message)
                     self.handle_message(message)
                 except websockets.ConnectionClosed:
                     break
 
     def start_websocket(self):
         asyncio.run(self.websocket_handler())
+
+    def send_message(self):
+        message = self.message_entry.get()
+        if message and self.ws:
+            asyncio.run(self.ws.send(message))
+            self.message_entry.delete(0, tk.END)
+        else:
+            messagebox.showerror("Error", "Message cannot be empty!")
 
     def handle_message(self, message):
         data = json.loads(message)
