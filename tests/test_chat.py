@@ -72,23 +72,23 @@ def test_websocket_basic_connection(client: TestClient, setup_database):
         # Receive the initial chat history (should be empty at the start)
         history_message = websocket.receive_text()
         history_data = json.loads(history_message)
-        assert history_data["type"] == "history", f"Expected type 'history', got: {history_data['type']}"
+        assert history_data["type"] == "history"
 
         # Receive new_user broadcast for "artem" joining the chat
         join_message = websocket.receive_text()
         join_data = json.loads(join_message)
-        assert join_data["type"] == "new_user", f"Expected type 'new_user', got: {join_data['type']}"
-        assert join_data["data"]["user"] == "artem", f"Expected 'artem' as user, got: {join_data['data']['user']}"
+        assert join_data["type"] == "new_user"
+        assert join_data["data"]["user"] == "artem"
         assert join_data["data"][
-                   "content"] == "has joined the chat!", f"Expected 'has joined the chat!', got: {join_data['data']['content']}"
+                   "content"] == "has joined the chat!"
 
         # Receive the list of online users (should contain only "artem")
         online_users_message = websocket.receive_text()
         online_users_data = json.loads(online_users_message)
         assert online_users_data[
-                   "type"] == "online_users", f"Expected type 'online_users', got: {online_users_data['type']}"
+                   "type"] == "online_users"
         assert "artem" in online_users_data[
-            "data"], f"Expected 'artem' in online users, got: {online_users_data['data']}"
+            "data"]
 
 
 def wait_for_message(websocket, timeout=3):
@@ -223,7 +223,8 @@ def test_websocket_two_users_chat_flow(client: TestClient, setup_database):
         message_broadcast_user2 = wait_for_message(websocket_user2)
         message_data_user2 = json.loads(message_broadcast_user2)
         assert message_data_user2["type"] == "message"
-        assert message_data_user2["subtype"] == "harmful"
+        assert message_data_user2["subtype"] == "clean"
         assert message_data_user2["data"]["user"] == "john"
         assert message_data_user2["data"]["content"] == "Hi artem, this is john"
+
 
