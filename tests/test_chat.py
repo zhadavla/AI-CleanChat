@@ -123,7 +123,6 @@ def test_websocket_chat_flow(client: TestClient, setup_database):
 
         # Wait and validate the online users (should contain only "artem")
         online_users_message = wait_for_message(websocket)
-        print(f"Received online users: {online_users_message}")
         online_users_data = json.loads(online_users_message)
         assert online_users_data["type"] == "online_users"
         assert online_users_data["data"] == ["artem"]
@@ -133,7 +132,6 @@ def test_websocket_chat_flow(client: TestClient, setup_database):
 
         # Wait and validate the broadcast of "artem: my first message"
         message_broadcast = wait_for_message(websocket)
-        print(f"Received message broadcast: {message_broadcast}")
         message_data = json.loads(message_broadcast)
         assert message_data["data"]["user"] == "artem"
         assert message_data["data"]["content"] == "my first message"
@@ -227,4 +225,81 @@ def test_websocket_two_users_chat_flow(client: TestClient, setup_database):
         assert message_data_user2["data"]["user"] == "john"
         assert message_data_user2["data"]["content"] == "Hi artem, this is john"
 
+def test_with_predict_harmful(client: TestClient, setup_database):
+    with client.websocket_connect("/ws") as websocket_user1, \
+            client.websocket_connect("/ws") as websocket_user2:
+        # Simulate "artem" joining the chat
+        websocket_user1.send_text("artem")
+
+        # Validate the history received by "artem" (should be empty at the beginning)
+        history_message_user1 = wait_for_message(websocket_user1)
+        history_data_user1 = json.loads(history_message_user1)
+        assert history_data_user1["type"] == "history"
+        assert history_data_user1["data"] == []  # Chat history should be empty initially
+
+        # Receive new_user broadcast for "artem" joining the chat
+        new_user_message_user1 = wait_for_message(websocket_user1)
+        new_user_data_user1 = json.loads(new_user_message_user1)
+        assert new_user_data_user1["type"] == "new_user"
+        assert new_user_data_user1["data"]["user"] == "artem"
+        assert new_user_data_user1["data"]["content"] == "has joined the chat!"
+
+        # Simulate "vlad" joining the chat
+        websocket_user2.send_text("vlad")
+
+        # Validate the history received by "vlad" (should also be empty)
+        history_message_user2 = wait_for_message(websocket_user2)
+        history_data_user2 = json.loads(history_message_user2)
+        assert history_data_user2["type"] == "history"
+        assert history_data_user2["data"] == []  # Chat history should be empty initially
+
+        # Receive new_user broadcast for "vlad" joining the chat
+        new_user_message_user2 = wait_for_message(websocket_user2)
+        new_user_data_user2 = json.loads(new_user_message_user2)
+        assert new_user_data_user2["type"] == "new_user"
+        assert new_user_data_user2["data"]["user"] == "vlad"
+        assert new_user_data_user2["data"]["content"] == "has joined the chat!"
+
+        # Validate online users for "artem" after vlad joins
+        online_users_message_user1 = wait_for_message(websocket_user1)
+        online_users_data_user1 = json.loads(online_users_message_user1)
+        assert online_users_data_user1["type"] == "online_users"
+        assert online_users_data_user1["data"] == ["artem"]
+
+        # Validate the updated online users for "artem" after vlad joins
+        updated_online_users_message_user1 = wait_for_message(websocket_user1)
+        updated_online_users_data_user1 = json.loads(updated_online_users_message_user1)
+        assert updated_online_users_data_user1["type"] == "new_user"
+        assert updated_online_users_data_user1["data"]["user"] == "vlad"
+        assert updated_online_users_data_user1["data"]["content"] == "has joined the chat!"
+
+        # Validate the online users list for "vlad"
+        online_users_message_user2 = wait_for_message(websocket_user2)
+        online_users_data_user2 = json.loads(online_users_message_user2)
+        assert online_users_data_user2["type"] == "online_users"
+        assert online_users_data_user2["data"] == ["artem", "vlad"]
+
+        # Validate the online users list for "vlad"
+        online_users_message_user1 = wait_for_message(websocket_user1)
+        online_users_data_user1 = json.loads(online_users_message_user1)
+        assert online_users_data_user1["type"] == "online_users"
+        assert online_users_data_user1["data"] == ["artem", "vlad"]
+        #
+        # Simulate "artem" sending hateful a message
+        websocket_user1.send_text("I hate you, idiot!")
+
+        # Both "artem" and "vlad" should receive this message
+        message_broadcast_user1 = wait_for_message(websocket_user1)
+        message_data_user1 = json.loads(message_broadcast_user1)
+        assert message_data_user1["type"] == "message"
+        assert message_data_user1["subtype"] == "harmful"
+        assert message_data_user1["data"]["user"] == "artem"
+        assert message_data_user1["data"]["content"] == "I hate you, idiot!"
+        #
+        message_broadcast_user2 = wait_for_message(websocket_user2)
+        message_data_user2 = json.loads(message_broadcast_user2)
+        assert message_data_user2["type"] == "message"
+        assert message_data_user2["subtype"] == "harmful"
+        assert message_data_user2["data"]["user"] == "artem"
+        assert message_data_user2["data"]["content"] == "I hate you, idiot!"
 

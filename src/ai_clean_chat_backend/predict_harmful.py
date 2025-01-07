@@ -57,6 +57,8 @@ except Exception as e:
             Mock function to predict harmfulness of a text,
             so that we can test the API without fetching or training the model.
             """
+        # import time
+        # time.sleep(3)
         bad_words = ['dumb', 'hate', 'stupid', 'idiot', 'racist', 'bigot', 'sexist']
         prediction =  'offensive_language' if any(word in bad_words for word in text.split()) else 'neither'
         print(f"Mock prediction for '{text}': {prediction}")
