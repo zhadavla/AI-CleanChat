@@ -103,6 +103,10 @@ class ChatApplication:
             self.update_online_users(content)
         elif message_type == "message":
             self.render_message(content)
+        elif message_type == "history":
+            for msg in content:
+                msg_content = msg.get("data")
+                self.render_message(msg_content)
         else:
             print("Unknown message type:", message_type)
 
